@@ -1,5 +1,5 @@
 {
-module Frontend Lexer (Token(..)), alexScanTokens, scan) where
+module Frontend.Lexer (Token(..), alexScanTokens, scan) where
 }
 
 %wrapper "basic"
