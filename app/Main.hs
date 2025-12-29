@@ -9,7 +9,7 @@ main :: IO ()
 main = do
     fullArgs <- getArgs
     parseRes <- parseFile $ fullArgs !! 0
-    let val = eval parseRes
+    let val = eval envEmpty parseRes
     let res = show val
     in putStrLn res
 
