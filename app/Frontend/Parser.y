@@ -1,11 +1,11 @@
 {
-module Frontend.Parse where
+module Frontend.Parser where
 import Frontend.Lexer
 import System.IO
 import AST
 }
 
-%name parse
+%name Parser
 %tokentype {Token}
 %error { parseError }
 

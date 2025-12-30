@@ -3,7 +3,7 @@ module AST(
     Vname
 ) where
 
-type vname = String
+type Vname = String
 
 
 data Exp = CnstBool Bool
@@ -15,4 +15,4 @@ data Exp = CnstBool Bool
     | Pow Exp Exp
     | Eql Exp Exp 
     | Var Vname --var usage
-    | Let VName Exp Exp -- init and declaration
+    | Let Vname Exp Exp -- init and declaration

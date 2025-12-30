@@ -1,6 +1,6 @@
-module Main (main) where
+module Main (
+    main) where
 
-import Lib
 import System.Environment( getArgs)
 import Frontend.Parser
 import Eval
@@ -10,6 +10,5 @@ main = do
     fullArgs <- getArgs
     parseRes <- parseFile $ fullArgs !! 0
     let val = eval envEmpty parseRes
-    let res = show val
-    in putStrLn res
+    let res = show val in putStrLn res
 

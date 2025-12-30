@@ -1,6 +1,6 @@
-module Eval(
+module Eval (
     Val(..),
-    eval
+    eval,
     envEmpty
 ) where
 
@@ -12,26 +12,26 @@ data Val
     | ValBool Bool
     deriving (Eq, Show)
 
-type Env = [(VName, Val)]
+type Env = [(Vname, Val)]
 
 envEmpty::Env
 envEmpty = []
 
-envExtend :: VName -> Val -> Env -> Env
+envExtend :: Vname -> Val -> Env -> Env
 envExtend v val env = (v,val) : env
 
-envLookup :: VName -> Val -> Env -> Maybe Val
+envLookup :: Vname -> Env -> Maybe Val
 envLookup = lookup
 
 evalIntBinOp :: (Int -> Int -> Either Error Int) -> Exp -> Exp -> Either Error Val
-evalIntBinOp f env e1 e2 =
-    case (eval env e1, eval e2) of
-        (Left error, _) -> Left err
+evalIntBinOp f eval e1 e2 =
+    case (eval e1, eval e2) of
+        (Left err, _) -> Left err
         (_, Left err) -> Left err
         (Right(ValInt x), Right(ValInt y)) -> case f x y of
             Left err -> Left err
             Right z -> Right $ ValInt z
-        (Right _, Right _) -> Left "Non integer operand"
+        (Right _ , Right _) -> Left "Non integer operand"
 
 evalIntBinOp' :: (Int -> Int -> Int) -> Env -> Exp -> Exp -> Either Error Val
 evalIntBinOp' f env e1 e2 =
@@ -42,16 +42,16 @@ evalIntBinOp' f env e1 e2 =
 
 type Error = String
 
-eval :: Env -> Exp -> Either Error val
-eval _env (CnstInt x) = Right $ ValInt x
-eval _env (CnstBool x) = Right $ ValBool b
+eval :: Env -> Exp -> Either Error Val
+eval _ env (CnstInt x) = Right $ ValInt x
+eval _ env (CnstBool x) = Right $ ValBool b
 eval env (Var v) = case envLookup v env of
     Just x -> Right x
     Nothing -> Left $ "Unkown variable: " ++ v
-eval _env ( Add e1 e2) = evalIntBinOp' (+) env e1 e2
-eval _env (Sub e1 e2) = evalIntBinOp' (-) env e1 e2
-eval _env (Mul e1 e2) = evalIntBinOp' (*) env e1 e2
-eval _env (Div e1 e2) = evalIntBinOp' checkdiv env e1 e2
+eval _ env (Add e1 e2) = evalIntBinOp' (+) env e1 e2
+eval _ env (Sub e1 e2) = evalIntBinOp' (-) env e1 e2
+eval _ env (Mul e1 e2) = evalIntBinOp' (*) env e1 e2
+eval _ env (Div e1 e2) = evalIntBinOp' checkdiv env e1 e2
     where
         checkdiv :: Int -> Int -> Either Error Val
         checkdiv _ 0 = Left "Division by zero not possible"
