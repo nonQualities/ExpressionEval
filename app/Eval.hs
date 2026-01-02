@@ -6,9 +6,11 @@ module Eval (
 
 import AST
 
+
 data Val
     = ValInt Int
     | ValBool Bool
+    | ValFun Env Vname Exp
     deriving (Eq, Show)
 
 type Env = [(Vname, Val)]
@@ -75,7 +77,66 @@ eval env (Eql e1 e2) =
         (Right (ValBool x), Right (ValBool y)) -> Right $ ValBool (x == y) -- Added Bool equality for completeness
         (Right _, Right _) -> Left "Type Error: Invalid operands to equality"
 
+-- If statements
+eval env (If cond e1 e2) =
+    case eval env cond of
+        Left err -> Left err
+        Right (ValBool True) -> eval env e1
+        Right (ValBool False) -> eval env e2
+        Right _ -> Left "Non boolean condition"
+--Let
 eval env (Let var e1 e2) =
     case eval env e1 of
         Left err -> Left err
         Right v  -> eval (envExtend var v env) e2
+--forloop
+eval env (ForLoop (p, initial) (i, bound) body) =
+    case eval env initial of 
+        Left err -> Left err
+        Right v -> 
+            case eval env bound of 
+                Left err -> Left err 
+                Right (ValInt n) ->
+                    let env' = envExtend i (ValInt 0) env
+                        env'' = envExtend p v env'
+                    in forloop i p n env'' body
+                Right _ -> Left "Non integral loop bound"
+--try catch
+eval env (TryCatch e1 e2) =
+    case eval env e1 of
+        Left _ -> eval env e2
+        Right v -> Right v
+
+-- lamda
+eval env (Lambda parName body) = Right $ ValFun env parName body 
+
+--apply
+eval env (Apply e1 e2) =
+    case eval env e1 of
+        Left err -> Left err
+        Right (ValFun env' parName body) ->
+            case eval env e2 of
+                Left err -> Left err
+                Right v ->
+                    let env'' = envExtend parName v env'
+                    in eval env'' body 
+        Right _ -> Left "Cannot apply argument to non Function"
+
+--forloop helper
+forloop :: Vname -> Vname -> Int -> Env -> Exp -> Either Error Val
+forloop iName pName n env body =
+    case envLookup iName env of
+        Just (ValInt i) ->
+            if i < n then
+                case eval env body of
+                    Left err -> Left err
+                    Right res ->
+                        let env' = envExtend pName res env
+                            env'' = envExtend iName (ValInt (i+1)) env'
+                        in forloop iName pName n env'' body
+            else 
+                case envLookup pName env of
+                    Just v -> Right v
+                    Nothing -> Left "Parameter not bound to for loop"
+        Just _ -> Left "Loop i parameter must be an integer"
+        Nothing -> Left "Loop i parameter is missing"
