@@ -38,6 +38,14 @@ data Val
 | `ValFun` | Function closures |
 
 A `ValFun` is a **closure**, capturing:
+>[!note] A closure is a semantic object that represents a function together with the environment required to evaluate it.
+Formally, a closure is a pair: \
+           $⟨λx. e, ρ⟩$ \
+           $⟨λx.e, ρ⟩$\
+where:\
+    $λx.e$ is a function abstraction \
+    $ρ$ is an environment mapping free variables of e to their values 
+    
 1. The environment at definition time
 2. The formal parameter name
 3. The function body expression
@@ -92,7 +100,7 @@ type Error = String
 
 ## 6. Evaluation Monad (`EvalM`)
 
-more on [[Monad]]
+more on [Monad](Monad)
 
 ```haskell
 newtype EvalM a =
