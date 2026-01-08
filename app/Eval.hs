@@ -1,10 +1,16 @@
+{-# LANGUAGE InstanceSigs #-}
 module Eval (
     Val(..),
     eval,
-    envEmpty
+    envEmpty,
+    runEval
 ) where
 
 import AST
+import Control.Monad (ap)
+
+
+-- Values and environments
 
 
 data Val
@@ -14,129 +20,174 @@ data Val
     deriving (Eq, Show)
 
 type Env = [(Vname, Val)]
-
+type KvStore = [(Val, Val)]
+type State = ([String], KvStore)
 type Error = String
+
+
+-- Evaluation monad
+newtype EvalM a = EvalM (Env -> State -> (Either Error a, State))
+
+
+-- Functor / Applicative / Monad (see document EvalDoc for more details)
+instance Functor EvalM where
+    fmap :: (a -> b) -> EvalM a -> EvalM b
+    fmap f (EvalM g) = EvalM $ \env s ->
+        case g env s of
+            (Left err, s') -> (Left err, s')
+            (Right x, s')  -> (Right (f x), s')
+
+instance Applicative EvalM where
+    pure :: a -> EvalM a
+    pure x = EvalM $ \_env s -> (Right x, s)
+
+    (<*>) :: EvalM (a -> b) -> EvalM a -> EvalM b
+    (<*>) = ap
+
+instance Monad EvalM where
+    (>>=) :: EvalM a -> (a -> EvalM b) -> EvalM b
+    EvalM m >>= f = EvalM $ \env s ->
+        case m env s of
+            (Left err, s') -> (Left err, s')
+            (Right x, s') ->
+                let EvalM m' = f x
+                in m' env s'
+
+
+-- Environment helpers
+askEnv :: EvalM Env
+askEnv = EvalM $ \env s -> (Right env, s)
+
+localEnv :: (Env -> Env) -> EvalM a -> EvalM a
+localEnv f (EvalM m) = EvalM $ \env s -> m (f env) s
 
 envEmpty :: Env
 envEmpty = []
 
 envExtend :: Vname -> Val -> Env -> Env
-envExtend v val env = (v,val) : env
+envExtend v val env = (v, val) : env
 
 envLookup :: Vname -> Env -> Maybe Val
 envLookup = lookup
 
--- 1. Helper for operations that MIGHT fail (like Div)
--- Returns Either Error Int, which we then wrap in ValInt
-evalIntBinOp :: (Int -> Int -> Either Error Int) -> Env -> Exp -> Exp -> Either Error Val
-evalIntBinOp f env e1 e2 =
-    case (eval env e1, eval env e2) of
-        (Left err, _) -> Left err
-        (_, Left err) -> Left err
-        (Right (ValInt x), Right (ValInt y)) ->
-            case f x y of
-                Left err -> Left err
-                Right z  -> Right $ ValInt z
-        (Right _, Right _) -> Left "Type Error: Non-integer operand in integer operation"
 
--- 2. Helper for operations that CANNOT fail (like Add, Mul)
--- Wraps the simple Int -> Int -> Int function into the error-handling type
-evalIntBinOp' :: (Int -> Int -> Int) -> Env -> Exp -> Exp -> Either Error Val
-evalIntBinOp' f = evalIntBinOp (\x y -> Right (f x y))
+-- Errors and control
+failure :: String -> EvalM a
+failure msg = EvalM $ \_env s -> (Left msg, s)
 
-eval :: Env -> Exp -> Either Error Val
--- Fixed: Removed the extra '_' argument to match type signature
-eval _ (CnstInt x) = Right $ ValInt x
-eval _ (CnstBool x) = Right $ ValBool x
-eval env (Var v) = case envLookup v env of
-    Just x  -> Right x
-    Nothing -> Left $ "Unknown variable: " ++ v
+catch :: EvalM a -> EvalM a -> EvalM a
+catch (EvalM m1) (EvalM m2) = EvalM $ \env s ->
+    case m1 env s of
+        (Left _, s')  -> m2 env s'
+        ok            -> ok
 
--- Binary Operations
-eval env (Add e1 e2) = evalIntBinOp' (+) env e1 e2
-eval env (Sub e1 e2) = evalIntBinOp' (-) env e1 e2
-eval env (Mul e1 e2) = evalIntBinOp' (*) env e1 e2
 
--- Div needs the error-checking helper (evalIntBinOp), not the safe one
-eval env (Div e1 e2) = evalIntBinOp safeDiv env e1 e2
+-- Running the evaluator
+stateEmpty :: State
+stateEmpty = ([], [])
+
+runEval :: EvalM a -> ([String], Either Error a)
+runEval (EvalM m) =
+    let (res, (out, _)) = m envEmpty stateEmpty
+    in (reverse out, res)
+
+
+-- Integer operation helpers
+evalIntBinOp :: (Int -> Int -> EvalM Int) -> Exp -> Exp -> EvalM Val
+evalIntBinOp f e1 e2 = do
+    v1 <- eval e1
+    v2 <- eval e2
+    case (v1, v2) of
+        (ValInt x, ValInt y) -> ValInt <$> f x y
+        _ -> failure "Non-integer operand"
+
+evalIntBinOp' :: (Int -> Int -> Int) -> Exp -> Exp -> EvalM Val
+evalIntBinOp' f = evalIntBinOp (\x y -> pure (f x y))
+
+
+-- Evaluation
+eval :: Exp -> EvalM Val
+
+-- Constants
+eval (CnstInt x)  = pure (ValInt x)
+eval (CnstBool x) = pure (ValBool x)
+
+-- Variables
+eval (Var v) = do
+    env <- askEnv
+    case envLookup v env of
+        Just x  -> pure x
+        Nothing -> failure ("Unknown variable: " ++ v)
+
+-- Arithmetic
+eval (Add e1 e2) = evalIntBinOp' (+) e1 e2
+eval (Sub e1 e2) = evalIntBinOp' (-) e1 e2
+eval (Mul e1 e2) = evalIntBinOp' (*) e1 e2
+
+eval (Div e1 e2) = evalIntBinOp safeDiv e1 e2
   where
-    safeDiv :: Int -> Int -> Either Error Int
-    safeDiv _ 0 = Left "Division by zero"
-    safeDiv x y = Right (x `div` y)
+    safeDiv _ 0 = failure "Division by zero"
+    safeDiv x y = pure (x `div` y)
 
-eval env (Pow e1 e2) = evalIntBinOp safePow env e1 e2
-    where
-        safePow :: Int -> Int -> Either Error Int
-        safePow x y = if y < 0 then Left "Negative Exponent" else Right (x ^ y)
+eval (Pow e1 e2) = evalIntBinOp safePow e1 e2
+  where
+    safePow _ y | y < 0 = failure "Negative exponent"
+    safePow x y        = pure (x ^ y)
 
-eval env (Eql e1 e2) =
-    case (eval env e1, eval env e2) of
-        (Left err, _) -> Left err
-        (_, Left err) -> Left err
-        (Right (ValInt x), Right (ValInt y)) -> Right $ ValBool (x == y)
-        (Right (ValBool x), Right (ValBool y)) -> Right $ ValBool (x == y) -- Added Bool equality for completeness
-        (Right _, Right _) -> Left "Type Error: Invalid operands to equality"
+-- Equality
+eval (Eql e1 e2) = do
+    v1 <- eval e1
+    v2 <- eval e2
+    case (v1, v2) of
+        (ValInt x, ValInt y)   -> pure (ValBool (x == y))
+        (ValBool x, ValBool y)-> pure (ValBool (x == y))
+        _ -> failure "Invalid operands to equality"
 
--- If statements
-eval env (If cond e1 e2) =
-    case eval env cond of
-        Left err -> Left err
-        Right (ValBool True) -> eval env e1
-        Right (ValBool False) -> eval env e2
-        Right _ -> Left "Non boolean condition"
---Let
-eval env (Let var e1 e2) =
-    case eval env e1 of
-        Left err -> Left err
-        Right v  -> eval (envExtend var v env) e2
---forloop
-eval env (ForLoop (p, initial) (i, bound) body) =
-    case eval env initial of 
-        Left err -> Left err
-        Right v -> 
-            case eval env bound of 
-                Left err -> Left err 
-                Right (ValInt n) ->
-                    let env' = envExtend i (ValInt 0) env
-                        env'' = envExtend p v env'
-                    in forloop i p n env'' body
-                Right _ -> Left "Non integral loop bound"
---try catch
-eval env (TryCatch e1 e2) =
-    case eval env e1 of
-        Left _ -> eval env e2
-        Right v -> Right v
+-- Conditionals
+eval (If cond e1 e2) = do
+    v <- eval cond
+    case v of
+        ValBool True  -> eval e1
+        ValBool False -> eval e2
+        _ -> failure "Non-boolean condition"
 
--- lamda
-eval env (Lambda parName body) = Right $ ValFun env parName body 
+-- Let binding
+eval (Let v e1 e2) = do
+    val <- eval e1
+    localEnv (envExtend v val) (eval e2)
 
---apply
-eval env (Apply e1 e2) =
-    case eval env e1 of
-        Left err -> Left err
-        Right (ValFun env' parName body) ->
-            case eval env e2 of
-                Left err -> Left err
-                Right v ->
-                    let env'' = envExtend parName v env'
-                    in eval env'' body 
-        Right _ -> Left "Cannot apply argument to non Function"
+-- For loop (fold-style)
+eval (ForLoop (p, initial) (iv, bound) body) = do
+    initVal <- eval initial
+    boundVal <- eval bound
+    case boundVal of
+        ValInt n -> loop 0 n initVal
+        _ -> failure "Non-integral loop bound"
+  where
+    loop i n acc
+        | i >= n = pure acc
+        | otherwise = do
+            acc' <- localEnv
+                        ( envExtend iv (ValInt i)
+                        . envExtend p acc
+                        )
+                        (eval body)
+            loop (i + 1) n acc'
 
---forloop helper
-forloop :: Vname -> Vname -> Int -> Env -> Exp -> Either Error Val
-forloop iName pName n env body =
-    case envLookup iName env of
-        Just (ValInt i) ->
-            if i < n then
-                case eval env body of
-                    Left err -> Left err
-                    Right res ->
-                        let env' = envExtend pName res env
-                            env'' = envExtend iName (ValInt (i+1)) env'
-                        in forloop iName pName n env'' body
-            else 
-                case envLookup pName env of
-                    Just v -> Right v
-                    Nothing -> Left "Parameter not bound to for loop"
-        Just _ -> Left "Loop i parameter must be an integer"
-        Nothing -> Left "Loop i parameter is missing"
+-- Lambda
+eval (Lambda v body) = do
+    env <- askEnv
+    pure (ValFun env v body)
+
+-- Application
+eval (Apply e1 e2) = do
+    f <- eval e1
+    arg <- eval e2
+    case f of
+        ValFun fEnv v body ->
+            localEnv (const (envExtend v arg fEnv)) (eval body)
+        _ -> failure "Attempted to apply non-function"
+
+-- Try/Catch
+eval (TryCatch e1 e2) =
+    eval e1 `catch` eval e2
