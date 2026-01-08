@@ -1,6 +1,6 @@
 # The Mathematics of Functors, Applicatives, and Monads
 
----
+
 
 ## 1. Why These Structures Exist
 
@@ -14,7 +14,7 @@ The core problem they solve is:
 
 Category theory provides precise answers.
 
----
+
 
 ## 2. Categories: The Minimal Setting
 
@@ -28,11 +28,11 @@ A **category** 𝓒 consists of:
 Satisfying:
 
 - **Associativity**:  
-  `(f ∘ g) ∘ h = f ∘ (g ∘ h)`
+  $(f ∘ g) ∘ h = f ∘ (g ∘ h)$
 - **Identity laws**:  
-  `id ∘ f = f = f ∘ id`
+  $id ∘ f = f = f ∘ id$
 
----
+
 
 ### Example: The Category **Hask**
 
@@ -43,7 +43,6 @@ Satisfying:
 
 Haskell programs live inside this category.
 
----
 
 ## 3. Functors: Structure-Preserving Mappings
 
@@ -73,7 +72,7 @@ Such that:
   F(f ∘ g) = F(f) ∘ F(g)
   ```
 
----
+
 
 ### 3.2 Programming Interpretation
 
@@ -89,7 +88,7 @@ fmap :: (a -> b) -> f a -> f b
 The functor **does not inspect or modify the context**.
 It only applies the function *inside* it.
 
----
+
 
 ### 3.3 Functor Laws (Mandatory)
 
@@ -105,7 +104,7 @@ It only applies the function *inside* it.
 
 Violation of these laws breaks compositional reasoning.
 
----
+
 
 ### 3.4 Conceptual Meaning
 
@@ -118,14 +117,14 @@ Examples:
 - `[]`: computation may return many results
 - `Reader r`: computation depends on an environment
 
----
+
 
 ## 4. Applicative Functors: Structured Function Application
 
 Functors allow mapping functions.  
 Applicatives allow **applying functions inside a context**.
 
----
+
 
 ### 4.1 Mathematical Characterization
 
@@ -136,7 +135,7 @@ An **applicative functor** is a functor equipped with:
 
 In categorical terms, applicatives correspond to **lax monoidal functors**.
 
----
+
 
 ### 4.2 Core Operations
 
@@ -149,7 +148,7 @@ Interpretation:
 - `pure` embeds a value into the context
 - `<*>` applies a contextual function to a contextual value
 
----
+
 
 ### 4.3 Applicative Laws
 
@@ -175,7 +174,7 @@ Interpretation:
 
 These ensure deterministic evaluation structure.
 
----
+
 
 ### 4.4 Why Applicatives Matter
 
@@ -193,13 +192,12 @@ This allows:
 
 Monads cannot guarantee this.
 
----
+
 
 ## 5. Monads: Sequencing with Dependency
 
 Monads allow later computations to **depend on earlier results**.
 
----
 
 ### 5.1 Mathematical Definition
 
@@ -216,7 +214,7 @@ Where:
 
 Satisfying coherence laws.
 
----
+
 
 ### 5.2 Programming Formulation
 
@@ -231,7 +229,7 @@ Equivalently:
 join :: m (m a) -> m a
 ```
 
----
+
 
 ### 5.3 Monad Laws
 
@@ -252,13 +250,12 @@ join :: m (m a) -> m a
 
 These laws guarantee predictable sequencing.
 
----
+
 
 ### 5.4 Conceptual Meaning
 
 A monad represents:
-
-> Computations with **effects and dependency**
+>[!note]  Computations with **effects and dependency**
 
 Examples:
 - `Maybe`: failure propagation
@@ -268,7 +265,6 @@ Examples:
 
 Monads define **control flow**, not just mapping.
 
----
 
 ## 6. Relationship Between the Three
 
@@ -285,7 +281,7 @@ Meaning:
 
 Each step adds expressive power but removes static guarantees.
 
----
+
 
 ## 7. Categorical Summary Table
 
@@ -295,7 +291,7 @@ Each step adds expressive power but removes static guarantees.
 | Applicative | Structured application | Dynamic dependency |
 | Monad | Dependent sequencing | Static structure |
 
----
+
 
 ## 8. Why Not Always Use Monads?
 
@@ -308,7 +304,7 @@ They:
 
 Applicatives should be preferred when dependency is unnecessary.
 
----
+
 
 ## 9. Mathematical Takeaway
 
@@ -316,12 +312,7 @@ Applicatives should be preferred when dependency is unnecessary.
 - Applicatives combine independent effects
 - Monads sequence dependent effects
 
-They are not metaphors.  
-They are **algebraic laws imposed on computation**.
 
-Ignoring the laws breaks reasoning, refactoring, and correctness.
-
----
 
 ## 10. Final Perspective
 
@@ -331,6 +322,5 @@ It explains **why certain programs compose and others do not**.
 Functors, Applicatives, and Monads are the minimal algebraic tools
 needed to make effects composable without chaos.
 
----
 
 End of document.
