@@ -3,7 +3,8 @@ module Eval (
     Val(..),
     eval,
     envEmpty,
-    runEval
+    runEval,
+    Error
 ) where
 
 import AST
@@ -104,6 +105,27 @@ evalIntBinOp f e1 e2 = do
 evalIntBinOp' :: (Int -> Int -> Int) -> Exp -> Exp -> EvalM Val
 evalIntBinOp' f = evalIntBinOp (\x y -> pure (f x y))
 
+evalPrint :: String -> EvalM ()
+evalPrint s = EvalM $ \_env (printed, kvstore) -> (Right (), (s : printed, kvstore))
+
+evalkvGet :: Val -> EvalM Val
+evalkvGet k = do
+    kvStore <- getKvStore
+    case lookup k kvStore of
+        Just v -> return v
+        Nothing -> failure $ "Invalid key: " ++ show k
+
+
+evalkvPut :: Val -> Val -> EvalM()
+evalkvPut k v = do
+    kvStore <- getKvStore
+    putKvStore $ (k,v) : filter (\(k',_) -> k' /= k) kvStore
+
+getKvStore :: EvalM KvStore
+getKvStore = EvalM $ \_env (printed, kvStore) -> (Right kvStore, (printed, kvStore))
+
+putKvStore :: KvStore -> EvalM()
+putKvStore kvStore = EvalM $ \_env (printed, _) -> (Right (), (printed, kvStore))
 
 -- Evaluation
 eval :: Exp -> EvalM Val
@@ -191,3 +213,22 @@ eval (Apply e1 e2) = do
 -- Try/Catch
 eval (TryCatch e1 e2) =
     eval e1 `catch` eval e2
+
+eval (Print s e) = do
+    v <- eval e
+    eval Print $ s ++ ": " ++
+        case v of
+            ValInt i -> show i
+            ValBool b -> show b
+            _ -> "#<fun>"
+
+eval (KvPut e1 e2 ) = do
+    k <- eval e1
+    v <- eval e2
+    evalkvPut k v 
+    return v
+
+eval(KvGet e) = do
+    v <- eval e
+    evalkvGet v
+
