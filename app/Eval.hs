@@ -216,11 +216,13 @@ eval (TryCatch e1 e2) =
 
 eval (Print s e) = do
     v <- eval e
-    eval Print $ s ++ ": " ++
-        case v of
-            ValInt i -> show i
-            ValBool b -> show b
-            _ -> "#<fun>"
+    let outputStr = s ++ ": " ++
+            case v of
+                ValInt i -> show i
+                ValBool b -> show b
+                _ -> "#<fun>"
+    evalPrint outputStr
+    pure v
 
 eval (KvPut e1 e2 ) = do
     k <- eval e1
