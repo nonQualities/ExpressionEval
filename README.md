@@ -52,8 +52,8 @@ make gen
 ## Documentation
 
 For a deeper dive into the theory and implementation details:
-* **Evaluation Logic**: See [EvalDoc.md](https://www.google.com/search?q=EvalDoc.md) for how expressions are reduced.
-* **Monadic Structure**: See [Monad.md](https://www.google.com/search?q=Monad.md) 
+* **Evaluation Logic**: See [EvalDoc.md](https://github.com/nonQualities/ExpressionEval/blob/main/EvalDoc.md) for how expressions are reduced.
+* **Monadic Structure**: See [Monad.md](https://github.com/nonQualities/ExpressionEval/blob/main/Monad.md) 
 
 ## Contributing
 

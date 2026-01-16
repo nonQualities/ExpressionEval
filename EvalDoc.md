@@ -18,7 +18,7 @@ Reader Env (State State (Either Error a))
 
 This stack is implemented manually to keep evaluation order, scoping rules, and failure propagation explicit.
 
----
+
 
 ## 2. Runtime Values (`Val`)
 
@@ -52,7 +52,7 @@ where:\
 
 This ensures lexical (static) scoping.
 
----
+
 
 ## 3. Environment (`Env`)
 
@@ -66,7 +66,7 @@ type Env = [(Vname, Val)]
 
 This choice favors simplicity and clarity over performance.
 
----
+
 
 ## 4. Evaluation State (`State`)
 
@@ -84,7 +84,7 @@ type State = ([String], KvStore)
    - Placeholder for future extensions
    - Threaded through evaluation to preserve structure
 
----
+
 
 ## 5. Error Model
 
@@ -122,7 +122,7 @@ Instead of stacking monads, the evaluator exposes the mechanics explicitly, maki
 - Teaching
 - Controlled extension
 
----
+
 
 ## 7. Functor, Applicative, and Monad
 
@@ -141,7 +141,7 @@ Instead of stacking monads, the evaluator exposes the mechanics explicitly, maki
 - Enables dependent sequencing
 - Short-circuits on the first error
 
----
+
 
 ## 8. Environment Operations
 
@@ -166,7 +166,7 @@ Used for:
 - Function application
 - Loop variables
 
----
+
 
 ## 9. Error Handling
 
@@ -185,7 +185,7 @@ Semantics:
 - If it fails, evaluate the second
 - Otherwise, keep the first result
 
----
+
 
 ## 10. Running the Evaluator
 
@@ -197,7 +197,7 @@ runEval :: EvalM a -> ([String], Either Error a)
 - Returns printed output and result
 - Output order is normalized before returning
 
----
+
 
 ## 11. Integer Operation Helpers
 
@@ -214,7 +214,7 @@ Responsibilities:
 
 Used for total integer operations such as addition and multiplication.
 
----
+
 
 ## 12. Evaluation Strategy
 
@@ -227,7 +227,7 @@ This is a **big-step evaluator**:
 - No intermediate machine states are exposed
 - Errors abort evaluation immediately
 
----
+
 
 ## 13. Expression Semantics
 
@@ -245,7 +245,7 @@ Evaluate directly to runtime values.
 - Dynamically type-checked
 - Invalid operands cause failure
 
----
+
 
 ## 14. Conditionals
 
@@ -257,7 +257,7 @@ If cond e1 e2
 - Only the selected branch is evaluated
 - Non-boolean conditions cause failure
 
----
+
 
 ## 15. Let Bindings
 
@@ -270,7 +270,7 @@ Evaluation steps:
 2. Extend the environment with `v`
 3. Evaluate `e2` under the extended environment
 
----
+
 
 ## 16. For Loop Semantics
 
@@ -287,7 +287,7 @@ This construct behaves like a **fold**, not a traditional imperative loop.
 
 The loop runs from `i = 0` to `i < bound`.
 
----
+
 
 ## 17. Lambda Abstraction
 
@@ -299,7 +299,7 @@ Lambda v body
 - Produces a closure
 - Does not evaluate the body immediately
 
----
+
 
 ## 18. Function Application
 
@@ -315,7 +315,7 @@ Semantics:
 
 This enforces lexical scoping.
 
----
+
 
 ## 19. Try-Catch
 
@@ -327,7 +327,7 @@ TryCatch e1 e2
 - If it fails, evaluate `e2`
 - Otherwise, keep the result of `e1`
 
----
+
 
 ## 20. Conceptual Summary
 
@@ -341,7 +341,7 @@ This evaluator is:
 
 Its explicit structure supports formal reasoning and systematic extension.
 
----
+
 
 ## 21. Natural Extensions
 
@@ -354,6 +354,6 @@ This architecture can be extended to support:
 - Static type checking
 - Desugaring into a core language
 
----
+
 
 End of documentation.
